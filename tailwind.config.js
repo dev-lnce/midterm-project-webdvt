@@ -8,6 +8,7 @@ export default {
   theme: {
     extend: {
       colors: {
+        background: "#ffffff",
         "on-surface-variant": "#404945",
         "surface-tint": "#376757",
         "on-background": "#121e18",
