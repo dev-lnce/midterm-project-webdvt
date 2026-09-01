@@ -1,13 +1,10 @@
 import { useMemo } from 'react';
 import { useTransactions } from '../hooks/useTransactions';
-import { useTheme } from '../context/ThemeContext';
+import { PieChart, ListFilter } from 'lucide-react';
 
 export default function Summary() {
   const { transactions } = useTransactions();
-  const { theme, toggleTheme } = useTheme();
 
-  // Calculate breakdown of spending by category using useMemo for performance optimization.
-  // Instead of recalculating this mapping on every render, it only updates when `transactions` changes.
   const expenseByCategory = useMemo(() => {
     const expenses = transactions.filter(t => t.type === 'Expense');
     const totalExpenses = expenses.reduce((acc, curr) => acc + curr.amount, 0);
@@ -21,7 +18,6 @@ export default function Summary() {
       return acc;
     }, {});
 
-    // Map object to array, calculate percentage, and sort highest to lowest
     return Object.entries(categories)
       .map(([name, amount]) => ({
         name,
@@ -31,58 +27,70 @@ export default function Summary() {
       .sort((a, b) => b.amount - a.amount);
   }, [transactions]);
 
+  const colors = [
+    'bg-emerald-600 dark:bg-emerald-500',
+    'bg-teal-600 dark:bg-teal-500',
+    'bg-cyan-600 dark:bg-cyan-500',
+    'bg-indigo-500 dark:bg-indigo-400',
+    'bg-rose-500 dark:bg-rose-400',
+    'bg-amber-500 dark:bg-amber-400'
+  ];
+
   return (
-    <div className="pt-16 md:pt-20 px-4 md:px-10 pb-24 md:pb-10 max-w-4xl mx-auto">
+    <div className="w-full max-w-4xl mx-auto space-y-8">
       
-      <div className="flex justify-between items-center mb-8 mt-6">
-        <div>
-          <h2 className="font-headline-lg text-headline-lg text-primary dark:text-primary-fixed">Spending Summary</h2>
-          <p className="text-on-surface-variant font-body-md mt-1 dark:text-outline-variant">Your expenses broken down by category</p>
-        </div>
-        
-        {/* App-Wide Theme Toggle as requested in rubric */}
-        <button 
-          onClick={toggleTheme}
-          className="flex items-center gap-2 px-4 py-2 bg-surface-container rounded-full text-on-surface hover:bg-surface-variant transition-colors dark:bg-inverse-on-surface dark:text-inverse-surface"
-        >
-          <span className="material-symbols-outlined">{theme === 'dark' ? 'light_mode' : 'dark_mode'}</span>
-          <span className="font-label-md hidden md:inline">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
-        </button>
+      <div className="w-full flex flex-col items-start text-left mb-2 md:mb-6">
+        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+          <PieChart size={28} className="text-emerald-600 dark:text-emerald-500" />
+          Spending Summary
+        </h2>
+        <p className="text-slate-500 dark:text-slate-400 font-medium mt-2 max-w-lg w-full">
+          Your expenses broken down by category. See where your money is going to better manage your budget.
+        </p>
       </div>
 
-      <div className="glass-card rounded-xl p-6 md:p-8 shadow-sm">
-        <h3 className="font-title-lg text-title-lg text-primary mb-6 dark:text-white border-b border-surface-container-high pb-4 dark:border-outline-variant/30">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-10 shadow-sm border border-slate-100 dark:border-slate-800 relative overflow-hidden">
+        
+        <div className="absolute right-0 top-0 w-64 h-64 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/3"></div>
+        
+        <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-8 pb-6 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2 relative z-10">
+          <ListFilter size={20} className="text-slate-400 dark:text-slate-500" />
           Expense Breakdown
         </h3>
         
         {expenseByCategory.length > 0 ? (
-          <div className="space-y-6">
-            {expenseByCategory.map((category, index) => (
-              <div key={category.name}>
-                <div className="flex justify-between items-end mb-2">
-                  <span className="font-label-md text-on-surface dark:text-white flex items-center gap-2">
-                    <span className={`w-3 h-3 rounded-full ${index % 2 === 0 ? 'bg-primary' : 'bg-secondary'}`}></span>
-                    {category.name}
-                  </span>
-                  <div className="text-right">
-                    <span className="font-title-lg font-semibold tabular-nums dark:text-white">${category.amount.toFixed(2)}</span>
-                    <span className="text-on-surface-variant text-xs ml-2 tabular-nums dark:text-outline-variant">({category.percentage.toFixed(1)}%)</span>
+          <div className="space-y-8 relative z-10">
+            {expenseByCategory.map((category, index) => {
+              const colorClass = colors[index % colors.length];
+              return (
+                <div key={category.name} className="group">
+                  <div className="flex justify-between items-end mb-3">
+                    <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+                      <span className={`w-4 h-4 rounded-full shadow-sm ${colorClass}`}></span>
+                      {category.name}
+                    </span>
+                    <div className="text-right">
+                      <span className="text-lg font-bold tabular-nums text-slate-900 dark:text-slate-100">${category.amount.toFixed(2)}</span>
+                      <span className="text-slate-500 dark:text-slate-400 text-xs ml-2 tabular-nums font-semibold">({category.percentage.toFixed(1)}%)</span>
+                    </div>
+                  </div>
+                  <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-4 overflow-hidden border border-slate-200/50 dark:border-slate-700/50">
+                    <div 
+                      className={`h-full rounded-full transition-all duration-1000 ease-out group-hover:brightness-110 ${colorClass}`} 
+                      style={{ width: `${category.percentage}%` }}
+                    ></div>
                   </div>
                 </div>
-                {/* Visual Bar - No external chart libraries, pure Tailwind/divs */}
-                <div className="w-full bg-surface-container-high rounded-full h-3 overflow-hidden dark:bg-surface-variant">
-                  <div 
-                    className={`h-full rounded-full transition-all duration-500 ease-out ${index % 2 === 0 ? 'bg-primary dark:bg-primary-fixed' : 'bg-secondary dark:bg-secondary-fixed'}`} 
-                    style={{ width: `${category.percentage}%` }}
-                  ></div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
-          <div className="py-12 text-center text-on-surface-variant dark:text-outline-variant">
-            <span className="material-symbols-outlined text-4xl mb-2 opacity-50">pie_chart</span>
-            <p>No expenses recorded yet.</p>
+          <div className="py-12 sm:py-16 w-full max-w-md mx-auto text-center flex flex-col items-center justify-center relative z-10">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mb-5 sm:mb-6">
+              <PieChart size={32} className="text-slate-400 dark:text-slate-500 opacity-50" />
+            </div>
+            <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">No expenses recorded</h3>
+            <p className="text-slate-500 dark:text-slate-400 font-medium w-full">Add some expenses to see your spending breakdown.</p>
           </div>
         )}
       </div>

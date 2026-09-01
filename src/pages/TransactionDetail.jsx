@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTransactions } from '../hooks/useTransactions';
+import { ArrowLeft, Save, Trash2, Edit2, AlertCircle, X, SearchX } from 'lucide-react';
 
 export default function TransactionDetail() {
   const { id } = useParams();
@@ -10,6 +11,8 @@ export default function TransactionDetail() {
   const [transaction, setTransaction] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({});
+  const [errors, setErrors] = useState({});
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     const tx = getTransactionById(id);
@@ -21,13 +24,15 @@ export default function TransactionDetail() {
 
   if (!transaction) {
     return (
-      <div className="pt-24 px-4 text-center h-screen flex flex-col justify-center items-center">
-        <span className="material-symbols-outlined text-6xl text-outline-variant mb-4">search_off</span>
-        <h2 className="text-2xl font-bold text-primary dark:text-primary-fixed">Transaction Not Found</h2>
-        <p className="text-on-surface-variant mb-6 dark:text-outline-variant">The transaction you are looking for does not exist.</p>
+      <div className="w-full flex flex-col justify-center items-center py-20">
+        <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6">
+          <SearchX size={32} className="text-slate-400 dark:text-slate-500" />
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">Transaction Not Found</h2>
+        <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-md text-center w-full font-medium">The transaction you are looking for does not exist or has been deleted.</p>
         <button 
           onClick={() => navigate('/')}
-          className="bg-primary text-white px-6 py-2 rounded-lg font-label-md dark:bg-primary-fixed dark:text-primary-container"
+          className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-xl font-semibold transition-all shadow-sm active:scale-[0.98]"
         >
           Back to Dashboard
         </button>
@@ -36,132 +41,217 @@ export default function TransactionDetail() {
   }
 
   const handleDelete = () => {
-    if (window.confirm("Are you sure you want to delete this transaction? This cannot be undone.")) {
-      deleteTransaction(id);
-      navigate('/');
+    deleteTransaction(id);
+    navigate('/');
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setEditForm(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
+  };
+
+  const validate = () => {
+    const newErrors = {};
+    if (!editForm.description.trim()) {
+      newErrors.description = 'Description is required';
     }
+    
+    const numAmount = Number(editForm.amount);
+    if (!editForm.amount || isNaN(numAmount) || numAmount <= 0) {
+      newErrors.amount = 'Please enter a valid positive amount';
+    }
+    
+    if (!editForm.date) {
+      newErrors.date = 'Date is required';
+    }
+    
+    if (!editForm.category.trim()) {
+      newErrors.category = 'Category is required';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSave = () => {
-    updateTransaction(id, {
-      ...editForm,
-      amount: Number(editForm.amount)
-    });
-    setTransaction({
-      ...editForm,
-      amount: Number(editForm.amount)
-    });
-    setIsEditing(false);
+    if (validate()) {
+      updateTransaction(id, {
+        ...editForm,
+        amount: Number(editForm.amount)
+      });
+      setTransaction({
+        ...editForm,
+        amount: Number(editForm.amount)
+      });
+      setIsEditing(false);
+    }
   };
 
   const isIncome = transaction.type === 'Income';
 
   return (
-    <div className="pt-16 md:pt-24 px-4 md:px-10 pb-24 md:pb-10 max-w-2xl mx-auto">
-      
-      <div className="flex items-center gap-4 mb-6">
+    <div className="w-full">
+      <div className="flex items-center gap-4 mb-6 md:mb-8">
         <button 
           onClick={() => navigate('/')}
-          className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center hover:bg-surface-variant transition-colors dark:bg-surface-variant dark:text-white dark:hover:bg-outline-variant/30"
+          className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors duration-200 ease-out text-slate-600 dark:text-slate-400"
+          aria-label="Go back"
         >
-          <span className="material-symbols-outlined">arrow_back</span>
+          <ArrowLeft size={20} />
         </button>
-        <h2 className="font-headline-lg text-headline-lg text-primary dark:text-primary-fixed">Transaction Details</h2>
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Transaction Details</h2>
       </div>
 
-      <div className="glass-card rounded-xl overflow-hidden shadow-sm">
+      <div className="w-full max-w-lg mx-auto bg-white dark:bg-slate-900 rounded-3xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800 relative">
         
         {/* Header Area */}
-        <div className={`p-8 text-center ${isIncome ? 'bg-secondary-container/20 dark:bg-secondary/20' : 'bg-error-container/20 dark:bg-error/20'} border-b border-surface-container-high dark:border-outline-variant/20`}>
-          <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${isIncome ? 'bg-secondary-container text-secondary' : 'bg-error-container text-error'}`}>
-            <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>
-              {isIncome ? 'payments' : 'receipt_long'}
-            </span>
+        <div className={`p-8 text-center flex flex-col items-center justify-center ${isIncome ? 'bg-emerald-50/50 dark:bg-emerald-500/5' : 'bg-rose-50/50 dark:bg-rose-500/5'} border-b border-slate-100 dark:border-slate-800 relative`}>
+          
+          <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mb-5 ${isIncome ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-rose-100 dark:bg-rose-500/20 text-rose-500 dark:text-rose-400'}`}>
+            <span className="text-3xl font-bold">{isIncome ? '+' : '-'}</span>
           </div>
           
           {isEditing ? (
-            <input 
-              type="number"
-              value={editForm.amount}
-              onChange={(e) => setEditForm({...editForm, amount: e.target.value})}
-              className="text-3xl font-bold text-center bg-transparent border-b border-primary/50 outline-none w-32 dark:text-white"
-            />
+            <div className="relative inline-block w-48">
+              <span className={`absolute left-0 top-1/2 -translate-y-1/2 text-2xl font-bold ${isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>$</span>
+              <input 
+                type="number"
+                name="amount"
+                step="0.01"
+                value={editForm.amount}
+                onChange={handleChange}
+                className={`w-full pl-8 py-2 text-4xl font-bold tabular-nums text-center bg-transparent border-b-2 outline-none dark:text-slate-100 transition-colors ${
+                  errors.amount ? 'border-rose-500' : 'border-slate-300 dark:border-slate-600 focus:border-emerald-500'
+                }`}
+              />
+              {errors.amount && <p className="text-rose-500 text-xs font-semibold mt-2 absolute -bottom-6 left-0 w-full text-center">{errors.amount}</p>}
+            </div>
           ) : (
-            <h1 className={`text-4xl font-display-md tabular-nums ${isIncome ? 'text-secondary dark:text-tertiary-fixed' : 'text-on-surface dark:text-white'}`}>
-              {isIncome ? '+' : '-'}${Math.abs(transaction.amount).toFixed(2)}
+            <h1 className={`text-5xl font-bold tabular-nums tracking-tight ${isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-slate-100'}`}>
+              ${Math.abs(transaction.amount).toFixed(2)}
             </h1>
           )}
         </div>
 
         {/* Details Area */}
-        <div className="p-6 space-y-6">
-          <div>
-            <label className="block font-label-sm text-label-sm text-on-surface-variant mb-1 dark:text-outline-variant">Description</label>
+        <div className="p-6 sm:p-8 space-y-6">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-slate-500 dark:text-slate-400">Description</label>
             {isEditing ? (
-              <input 
-                type="text"
-                value={editForm.description}
-                onChange={(e) => setEditForm({...editForm, description: e.target.value})}
-                className="w-full px-4 py-2 border border-outline-variant rounded-md bg-surface-container dark:bg-surface-variant dark:border-outline dark:text-white"
-              />
+              <div>
+                <input 
+                  type="text"
+                  name="description"
+                  value={editForm.description}
+                  onChange={handleChange}
+                  className={`w-full px-4 py-3 rounded-xl border bg-slate-50/50 dark:bg-slate-800/50 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all dark:text-slate-100 ${
+                    errors.description ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-slate-700'
+                  }`}
+                />
+                {errors.description && <p className="text-rose-500 text-sm font-medium mt-1">{errors.description}</p>}
+              </div>
             ) : (
-              <p className="font-title-lg text-primary dark:text-white">{transaction.description}</p>
+              <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{transaction.description}</p>
             )}
           </div>
           
           <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block font-label-sm text-label-sm text-on-surface-variant mb-1 dark:text-outline-variant">Type</label>
-              <p className="font-body-md text-on-surface dark:text-white">{transaction.type}</p>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-slate-500 dark:text-slate-400">Type</label>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg font-semibold text-sm bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700">
+                <div className={`w-2 h-2 rounded-full ${isIncome ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
+                {transaction.type}
+              </div>
             </div>
             
-            <div>
-              <label className="block font-label-sm text-label-sm text-on-surface-variant mb-1 dark:text-outline-variant">Category</label>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-slate-500 dark:text-slate-400">Category</label>
               {isEditing ? (
-                <input 
-                  type="text"
-                  value={editForm.category}
-                  onChange={(e) => setEditForm({...editForm, category: e.target.value})}
-                  className="w-full px-3 py-1.5 border border-outline-variant rounded-md bg-surface-container dark:bg-surface-variant dark:border-outline dark:text-white"
-                />
+                <div>
+                  <input 
+                    type="text"
+                    name="category"
+                    value={editForm.category}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-3 rounded-xl border bg-slate-50/50 dark:bg-slate-800/50 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all dark:text-slate-100 ${
+                      errors.category ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-slate-700'
+                    }`}
+                  />
+                  {errors.category && <p className="text-rose-500 text-sm font-medium mt-1">{errors.category}</p>}
+                </div>
               ) : (
-                <p className="font-body-md text-on-surface dark:text-white">{transaction.category}</p>
+                <p className="font-semibold text-slate-900 dark:text-slate-100">{transaction.category}</p>
               )}
             </div>
 
-            <div>
-              <label className="block font-label-sm text-label-sm text-on-surface-variant mb-1 dark:text-outline-variant">Date</label>
+            <div className="space-y-1.5 col-span-2 sm:col-span-1">
+              <label className="text-sm font-medium text-slate-500 dark:text-slate-400">Date</label>
               {isEditing ? (
-                <input 
-                  type="date"
-                  value={editForm.date}
-                  onChange={(e) => setEditForm({...editForm, date: e.target.value})}
-                  className="w-full px-3 py-1.5 border border-outline-variant rounded-md bg-surface-container dark:bg-surface-variant dark:border-outline dark:text-white"
-                />
+                <div>
+                  <input 
+                    type="date"
+                    name="date"
+                    value={editForm.date}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-3 rounded-xl border bg-slate-50/50 dark:bg-slate-800/50 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all dark:text-slate-100 ${
+                      errors.date ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-slate-700'
+                    }`}
+                  />
+                  {errors.date && <p className="text-rose-500 text-sm font-medium mt-1">{errors.date}</p>}
+                </div>
               ) : (
-                <p className="font-body-md text-on-surface dark:text-white">{new Date(transaction.date).toLocaleDateString()}</p>
+                <p className="font-semibold text-slate-900 dark:text-slate-100">{new Date(transaction.date).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' })}</p>
               )}
             </div>
           </div>
         </div>
 
+        {/* Delete Confirmation Overlay */}
+        {showDeleteConfirm && (
+          <div className="absolute inset-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm z-10 flex flex-col items-center justify-center p-6 text-center transition-all duration-300">
+            <div className="w-16 h-16 rounded-full bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center mb-4 text-rose-600 dark:text-rose-400">
+              <AlertCircle size={32} />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">Delete Transaction?</h3>
+            <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-sm w-full font-medium">This action cannot be undone. The transaction will be permanently removed.</p>
+            <div className="flex flex-col sm:flex-row gap-3 w-full">
+              <button 
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 py-3 px-4 rounded-xl font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 active:scale-[0.98]"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleDelete}
+                className="flex-1 py-3 px-4 rounded-xl font-semibold bg-rose-500 text-white hover:bg-rose-600 transition-all active:scale-[0.98] shadow-sm shadow-rose-500/20"
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Action Buttons */}
-        <div className="p-6 bg-surface-container-low border-t border-surface-container-high flex gap-4 dark:bg-surface-variant dark:border-outline-variant/20">
+        <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex flex-col sm:flex-row gap-3 dark:bg-slate-900/50 dark:border-slate-800">
           {isEditing ? (
             <>
               <button 
                 onClick={() => {
                   setEditForm(transaction);
+                  setErrors({});
                   setIsEditing(false);
                 }}
-                className="flex-1 py-2 border border-outline-variant text-on-surface rounded-lg font-label-md dark:text-white"
+                className="flex-[1] py-3.5 px-4 rounded-xl font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-all dark:text-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 active:scale-[0.98] flex items-center justify-center gap-2"
               >
+                <X size={18} />
                 Cancel
               </button>
               <button 
                 onClick={handleSave}
-                className="flex-1 py-2 bg-primary text-white rounded-lg font-label-md dark:bg-primary-fixed dark:text-primary-container"
+                className="flex-[2] py-3.5 px-4 rounded-xl font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-all shadow-sm shadow-emerald-500/20 active:scale-[0.98] flex items-center justify-center gap-2"
               >
+                <Save size={18} />
                 Save Changes
               </button>
             </>
@@ -169,14 +259,16 @@ export default function TransactionDetail() {
             <>
               <button 
                 onClick={() => setIsEditing(true)}
-                className="flex-1 py-2 border border-primary text-primary rounded-lg font-label-md hover:bg-primary/5 transition-colors dark:border-primary-fixed dark:text-primary-fixed"
+                className="flex-1 py-3.5 px-4 border-2 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
               >
+                <Edit2 size={18} />
                 Edit
               </button>
               <button 
-                onClick={handleDelete}
-                className="flex-1 py-2 border border-error text-error rounded-lg font-label-md hover:bg-error/5 transition-colors dark:border-error-container dark:text-error-container"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="flex-1 py-3.5 px-4 border-2 border-rose-100 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl font-semibold hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:border-rose-200 dark:hover:border-rose-500/30 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
               >
+                <Trash2 size={18} />
                 Delete
               </button>
             </>
