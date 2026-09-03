@@ -12,7 +12,10 @@ export default function AddTransaction() {
     amount: '',
     type: 'Expense',
     category: 'Food',
-    date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+    date: (() => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    })(), // YYYY-MM-DD local time
   });
 
   const [errors, setErrors] = useState({});
@@ -24,7 +27,7 @@ export default function AddTransaction() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
+
     // Auto-update category if type changes to prevent invalid category/type combos
     if (name === 'type') {
       setFormData(prev => ({
@@ -35,7 +38,7 @@ export default function AddTransaction() {
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
-    
+
     // Clear error when user types
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: null }));
@@ -47,20 +50,20 @@ export default function AddTransaction() {
     if (!formData.description.trim()) {
       newErrors.description = 'Description is required';
     }
-    
+
     const numAmount = Number(formData.amount);
     if (!formData.amount || isNaN(numAmount) || numAmount <= 0) {
       newErrors.amount = 'Please enter a valid positive amount';
     }
-    
+
     if (!formData.date) {
       newErrors.date = 'Date is required';
     }
-    
+
     if (!formData.category) {
       newErrors.category = 'Category is required';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -75,14 +78,23 @@ export default function AddTransaction() {
         category: formData.category,
         date: formData.date,
       });
-      navigate('/'); // Go back to dashboard on success
+      // Delay navigation so the state update and useEffect save to localStorage can finish
+      setTimeout(() => navigate('/'), 0);
     }
   };
+
+  // Context-aware label and placeholder for the description/source field.
+  // The underlying data field name stays `description` so the data model
+  // (and useTransactions.js) remains completely untouched.
+  const descriptionLabel = formData.type === 'Income' ? 'Source' : 'Description';
+  const descriptionPlaceholder = formData.type === 'Income'
+    ? 'e.g. Monthly allowance, Salary, Freelance payment'
+    : 'e.g. Grocery shopping';
 
   return (
     <div className="w-full">
       <div className="flex items-center gap-4 mb-6 md:mb-8">
-        <button 
+        <button
           onClick={() => navigate('/')}
           className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors duration-200 ease-out text-slate-600 dark:text-slate-400"
           aria-label="Go back"
@@ -94,15 +106,15 @@ export default function AddTransaction() {
 
       <div className="w-full max-w-lg mx-auto bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          
+
           {/* Type Toggle */}
           <div className="flex rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700">
             <button
               type="button"
               onClick={() => handleChange({ target: { name: 'type', value: 'Income' } })}
               className={`flex-1 py-2.5 px-4 text-sm font-semibold rounded-lg transition-all duration-200 ease-out flex items-center justify-center gap-2 ${
-                formData.type === 'Income' 
-                  ? 'bg-emerald-600 text-white shadow-sm' 
+                formData.type === 'Income'
+                  ? 'bg-emerald-600 text-white shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-700/50'
               }`}
             >
@@ -113,8 +125,8 @@ export default function AddTransaction() {
               type="button"
               onClick={() => handleChange({ target: { name: 'type', value: 'Expense' } })}
               className={`flex-1 py-2.5 px-4 text-sm font-semibold rounded-lg transition-all duration-200 ease-out flex items-center justify-center gap-2 ${
-                formData.type === 'Expense' 
-                  ? 'bg-rose-500 text-white shadow-sm' 
+                formData.type === 'Expense'
+                  ? 'bg-rose-500 text-white shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-700/50'
               }`}
             >
@@ -123,9 +135,11 @@ export default function AddTransaction() {
             </button>
           </div>
 
-          {/* Description */}
+          {/* Description / Source — label and placeholder are context-aware */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Description</label>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              {descriptionLabel}
+            </label>
             <input
               type="text"
               name="description"
@@ -134,16 +148,16 @@ export default function AddTransaction() {
               className={`w-full px-4 py-3 rounded-xl border bg-slate-50/50 dark:bg-slate-800/50 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all dark:text-slate-100 ${
                 errors.description ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-slate-700'
               }`}
-              placeholder="e.g. Grocery shopping"
+              placeholder={descriptionPlaceholder}
             />
             {errors.description && <p className="text-rose-500 text-sm mt-1">{errors.description}</p>}
           </div>
 
-          {/* Amount */}
+          {/* Amount — ₱ symbol replaces $ */}
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Amount</label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 font-medium">$</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 font-medium">₱</span>
               <input
                 type="number"
                 step="0.01"

@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTransactions } from '../hooks/useTransactions';
 import { ArrowLeft, Save, Trash2, Edit2, AlertCircle, X, SearchX } from 'lucide-react';
+import { formatCurrency } from '../utils/formatCurrency';
 
 export default function TransactionDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { getTransactionById, updateTransaction, deleteTransaction } = useTransactions();
-  
+
   const [transaction, setTransaction] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({});
@@ -30,7 +31,7 @@ export default function TransactionDetail() {
         </div>
         <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">Transaction Not Found</h2>
         <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-md text-center w-full font-medium">The transaction you are looking for does not exist or has been deleted.</p>
-        <button 
+        <button
           onClick={() => navigate('/')}
           className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-xl font-semibold transition-all shadow-sm active:scale-[0.98]"
         >
@@ -42,7 +43,8 @@ export default function TransactionDetail() {
 
   const handleDelete = () => {
     deleteTransaction(id);
-    navigate('/');
+    // Delay navigation so the state update and useEffect save to localStorage can finish
+    setTimeout(() => navigate('/'), 0);
   };
 
   const handleChange = (e) => {
@@ -56,20 +58,20 @@ export default function TransactionDetail() {
     if (!editForm.description.trim()) {
       newErrors.description = 'Description is required';
     }
-    
+
     const numAmount = Number(editForm.amount);
     if (!editForm.amount || isNaN(numAmount) || numAmount <= 0) {
       newErrors.amount = 'Please enter a valid positive amount';
     }
-    
+
     if (!editForm.date) {
       newErrors.date = 'Date is required';
     }
-    
+
     if (!editForm.category.trim()) {
       newErrors.category = 'Category is required';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -90,10 +92,17 @@ export default function TransactionDetail() {
 
   const isIncome = transaction.type === 'Income';
 
+  // Context-aware label/placeholder for the description/source field in edit mode.
+  // The underlying data field stays `description` — only the UI label changes.
+  const descriptionLabel = isIncome ? 'Source' : 'Description';
+  const descriptionPlaceholder = isIncome
+    ? 'e.g. Monthly allowance, Salary, Freelance payment'
+    : 'e.g. Grocery shopping';
+
   return (
     <div className="w-full">
       <div className="flex items-center gap-4 mb-6 md:mb-8">
-        <button 
+        <button
           onClick={() => navigate('/')}
           className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors duration-200 ease-out text-slate-600 dark:text-slate-400"
           aria-label="Go back"
@@ -104,18 +113,19 @@ export default function TransactionDetail() {
       </div>
 
       <div className="w-full max-w-lg mx-auto bg-white dark:bg-slate-900 rounded-3xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800 relative">
-        
+
         {/* Header Area */}
         <div className={`p-8 text-center flex flex-col items-center justify-center ${isIncome ? 'bg-emerald-50/50 dark:bg-emerald-500/5' : 'bg-rose-50/50 dark:bg-rose-500/5'} border-b border-slate-100 dark:border-slate-800 relative`}>
-          
+
           <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mb-5 ${isIncome ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-rose-100 dark:bg-rose-500/20 text-rose-500 dark:text-rose-400'}`}>
             <span className="text-3xl font-bold">{isIncome ? '+' : '-'}</span>
           </div>
-          
+
           {isEditing ? (
             <div className="relative inline-block w-48">
-              <span className={`absolute left-0 top-1/2 -translate-y-1/2 text-2xl font-bold ${isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>$</span>
-              <input 
+              {/* ₱ symbol replaces $ in edit mode */}
+              <span className={`absolute left-0 top-1/2 -translate-y-1/2 text-2xl font-bold ${isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>₱</span>
+              <input
                 type="number"
                 name="amount"
                 step="0.01"
@@ -129,7 +139,8 @@ export default function TransactionDetail() {
             </div>
           ) : (
             <h1 className={`text-5xl font-bold tabular-nums tracking-tight ${isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-slate-100'}`}>
-              ${Math.abs(transaction.amount).toFixed(2)}
+              {/* formatCurrency handles ₱ symbol + thousand separators */}
+              {formatCurrency(Math.abs(transaction.amount))}
             </h1>
           )}
         </div>
@@ -137,14 +148,16 @@ export default function TransactionDetail() {
         {/* Details Area */}
         <div className="p-6 sm:p-8 space-y-6">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-500 dark:text-slate-400">Description</label>
+            {/* Context-aware label: 'Source' for Income, 'Description' for Expense */}
+            <label className="text-sm font-medium text-slate-500 dark:text-slate-400">{descriptionLabel}</label>
             {isEditing ? (
               <div>
-                <input 
+                <input
                   type="text"
                   name="description"
                   value={editForm.description}
                   onChange={handleChange}
+                  placeholder={descriptionPlaceholder}
                   className={`w-full px-4 py-3 rounded-xl border bg-slate-50/50 dark:bg-slate-800/50 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all dark:text-slate-100 ${
                     errors.description ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-slate-700'
                   }`}
@@ -155,7 +168,7 @@ export default function TransactionDetail() {
               <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{transaction.description}</p>
             )}
           </div>
-          
+
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-slate-500 dark:text-slate-400">Type</label>
@@ -164,12 +177,12 @@ export default function TransactionDetail() {
                 {transaction.type}
               </div>
             </div>
-            
+
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-slate-500 dark:text-slate-400">Category</label>
               {isEditing ? (
                 <div>
-                  <input 
+                  <input
                     type="text"
                     name="category"
                     value={editForm.category}
@@ -189,7 +202,7 @@ export default function TransactionDetail() {
               <label className="text-sm font-medium text-slate-500 dark:text-slate-400">Date</label>
               {isEditing ? (
                 <div>
-                  <input 
+                  <input
                     type="date"
                     name="date"
                     value={editForm.date}
@@ -216,13 +229,13 @@ export default function TransactionDetail() {
             <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">Delete Transaction?</h3>
             <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-sm w-full font-medium">This action cannot be undone. The transaction will be permanently removed.</p>
             <div className="flex flex-col sm:flex-row gap-3 w-full">
-              <button 
+              <button
                 onClick={() => setShowDeleteConfirm(false)}
                 className="flex-1 py-3 px-4 rounded-xl font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 active:scale-[0.98]"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={handleDelete}
                 className="flex-1 py-3 px-4 rounded-xl font-semibold bg-rose-500 text-white hover:bg-rose-600 transition-all active:scale-[0.98] shadow-sm shadow-rose-500/20"
               >
@@ -236,7 +249,7 @@ export default function TransactionDetail() {
         <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex flex-col sm:flex-row gap-3 dark:bg-slate-900/50 dark:border-slate-800">
           {isEditing ? (
             <>
-              <button 
+              <button
                 onClick={() => {
                   setEditForm(transaction);
                   setErrors({});
@@ -247,7 +260,7 @@ export default function TransactionDetail() {
                 <X size={18} />
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={handleSave}
                 className="flex-[2] py-3.5 px-4 rounded-xl font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-all shadow-sm shadow-emerald-500/20 active:scale-[0.98] flex items-center justify-center gap-2"
               >
@@ -257,14 +270,14 @@ export default function TransactionDetail() {
             </>
           ) : (
             <>
-              <button 
+              <button
                 onClick={() => setIsEditing(true)}
                 className="flex-1 py-3.5 px-4 border-2 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
               >
                 <Edit2 size={18} />
                 Edit
               </button>
-              <button 
+              <button
                 onClick={() => setShowDeleteConfirm(true)}
                 className="flex-1 py-3.5 px-4 border-2 border-rose-100 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl font-semibold hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:border-rose-200 dark:hover:border-rose-500/30 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
               >

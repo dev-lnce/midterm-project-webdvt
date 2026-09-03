@@ -3,19 +3,17 @@ import { useState, useEffect, useCallback } from 'react';
 // A custom hook to manage transaction data. 
 // This acts as our single source of truth for all components.
 export function useTransactions() {
-  const [transactions, setTransactions] = useState([]);
-
-  // Load transactions from localStorage when the hook mounts
-  useEffect(() => {
+  const [transactions, setTransactions] = useState(() => {
     const stored = localStorage.getItem('emerald_budget_transactions');
     if (stored) {
       try {
-        setTransactions(JSON.parse(stored));
+        return JSON.parse(stored);
       } catch (e) {
         console.error('Failed to parse stored transactions', e);
       }
     }
-  }, []);
+    return [];
+  });
 
   // Sync transactions to localStorage whenever they change
   useEffect(() => {

@@ -2,6 +2,7 @@ import { memo } from 'react';
 import PropTypes from 'prop-types';
 import { useNavigate } from 'react-router-dom';
 import { ArrowUpRight, ArrowDownRight, ChevronRight } from 'lucide-react';
+import { formatCurrency } from '../utils/formatCurrency';
 
 const TransactionItem = memo(function TransactionItem({ transaction }) {
   const navigate = useNavigate();
@@ -39,7 +40,8 @@ const TransactionItem = memo(function TransactionItem({ transaction }) {
       </div>
       <div className="flex items-center gap-2 sm:gap-3">
         <span className={`text-lg sm:text-xl font-bold tabular-nums tracking-tight ${amountColor}`}>
-          {sign}${Math.abs(transaction.amount).toFixed(2)}
+          {/* formatCurrency produces "₱1,234.56"; we prepend sign manually to keep +/- visual meaning */}
+          {sign}{formatCurrency(Math.abs(transaction.amount))}
         </span>
         <ChevronRight size={20} className="text-slate-400 group-hover:text-emerald-600 dark:text-slate-500 dark:group-hover:text-emerald-400 transition-colors group-hover:translate-x-1 duration-200" />
       </div>
