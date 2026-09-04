@@ -4,7 +4,7 @@ import TransactionItem from '../components/TransactionItem';
 import CategoryDonutChart from '../components/CategoryDonutChart';
 import IncomeExpenseBarChart from '../components/IncomeExpenseBarChart';
 import { Link } from 'react-router-dom';
-import { Wallet, ArrowUpRight, ArrowDownRight, Receipt, SearchX, Plus, PieChart, BarChart2, ChevronRight, ChevronLeft, Eye, EyeOff, TrendingUp } from 'lucide-react';
+import { Wallet, ArrowUpRight, ArrowDownRight, Receipt, SearchX, PieChart, BarChart2, ChevronRight, ChevronLeft, Eye, EyeOff } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
 
 const CATEGORY_COLORS = [

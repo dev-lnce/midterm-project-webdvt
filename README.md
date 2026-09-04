@@ -12,7 +12,14 @@ This is a complete, production-ready multi-page Personal Budget Tracker built us
 
 ## Project Structure
 
-- `src/components/`: Reusable UI components (`Layout.jsx`, `TransactionItem.jsx`).
+- `src/components/`: Reusable UI components:
+  - `Layout.jsx` — App shell with mobile header, desktop sidebar, and bottom nav.
+  - `Sidebar.jsx` — Desktop side navigation with theme toggle and New Transaction CTA.
+  - `TransactionItem.jsx` — Memoized row component for the transaction list.
+  - `CategoryDonutChart.jsx` — Recharts donut chart for expense category breakdown.
+  - `IncomeExpenseBarChart.jsx` — Recharts grouped bar chart for income vs. expenses over time.
+  - `BalanceTrendChart.jsx` — SVG sparkline showing balance trend over a selected period.
+  - `PaymentMethodBadge.jsx` — Styled badge displaying the payment method on a transaction detail.
 - `src/context/`: Contains the `ThemeContext.jsx` for light/dark mode state.
 - `src/hooks/`: Contains the custom `useTransactions.js` hook for persistent data.
 - `src/pages/`: Contains the 4 main page routes (`Dashboard.jsx`, `AddTransaction.jsx`, `TransactionDetail.jsx`, `Summary.jsx`).

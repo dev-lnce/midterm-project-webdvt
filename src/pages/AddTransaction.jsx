@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTransactions } from '../hooks/useTransactions';
-import { useSavingsGoals } from '../hooks/useSavingsGoals';
-import { ArrowLeft, TrendingUp, TrendingDown, Save, CreditCard } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, Save } from 'lucide-react';
 
 export default function AddTransaction() {
   const { addTransaction } = useTransactions();
-  const { goals, updateGoal } = useSavingsGoals();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -22,7 +20,6 @@ export default function AddTransaction() {
   });
 
   const [errors, setErrors] = useState({});
-  const [successMessage, setSuccessMessage] = useState('');
 
   const categories = {
     Income: ['Salary', 'Investment', 'Gift', 'Other'],
@@ -83,44 +80,15 @@ export default function AddTransaction() {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validate()) {
-      const amount = Number(formData.amount);
-      
       addTransaction({
         description: formData.description.trim(),
-        amount: amount,
+        amount: Number(formData.amount),
         type: formData.type,
         category: formData.category,
         date: formData.date,
         paymentMethod: formData.paymentMethod,
       });
-
-      // Handle Virtual Allocation for Savings Goals
-      // Goal contributions are a virtual allocation layer. They simply increment the goal's currentAmount 
-      // in the goals state without touching the transaction array or affecting Total Income/Balance.
-      // (Note: Legacy recurring/notes fields were removed as they were unimplemented/promissory features).
-      if (formData.type === 'Income') {
-        let totalAllocated = 0;
-        let activeGoalsCount = 0;
-        
-        goals.forEach(goal => {
-          if (goal.autoDeductEnabled) {
-            const allocation = (amount * goal.autoDeductPercentage) / 100;
-            // This is a virtual allocation: we increment the goal's current amount
-            updateGoal(goal.id, { currentAmount: (goal.currentAmount || 0) + allocation });
-            totalAllocated += allocation;
-            activeGoalsCount++;
-          }
-        });
-        
-        if (activeGoalsCount > 0) {
-          // Show toast/message before navigating
-          setSuccessMessage(`₱${totalAllocated.toFixed(2)} auto-added to ${activeGoalsCount} goal(s)`);
-          setTimeout(() => navigate('/'), 1500);
-          return;
-        }
-      }
-
-      setTimeout(() => navigate('/'), 0);
+      navigate('/');
     }
   };
 
@@ -142,12 +110,6 @@ export default function AddTransaction() {
       </div>
 
       <div className="w-full max-w-lg mx-auto bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
-        {successMessage && (
-          <div className="mb-6 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-semibold text-sm text-center border border-emerald-200/50 dark:border-emerald-500/20">
-            {successMessage}
-          </div>
-        )}
-        
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           {/* Type Toggle */}
           <div className="flex rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700">
@@ -286,8 +248,6 @@ export default function AddTransaction() {
             {errors.date && <p className="text-rose-500 text-sm mt-1">{errors.date}</p>}
           </div>
 
-
-
           <div className="pt-4 flex flex-col sm:flex-row gap-4 border-t border-slate-100 dark:border-slate-800">
             <button
               type="button"
@@ -298,8 +258,7 @@ export default function AddTransaction() {
             </button>
             <button
               type="submit"
-              disabled={!!successMessage}
-              className="flex-1 py-3 px-4 rounded-xl font-medium text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition-all duration-200 ease-out active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="flex-1 py-3 px-4 rounded-xl font-medium text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition-all duration-200 ease-out active:scale-[0.98] flex items-center justify-center gap-2"
             >
               <Save size={18} />
               Save Transaction

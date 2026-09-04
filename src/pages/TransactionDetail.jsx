@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTransactions } from '../hooks/useTransactions';
-import { ArrowLeft, Save, Trash2, Edit2, AlertCircle, X, SearchX, Repeat } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Edit2, AlertCircle, X, SearchX } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
 import PaymentMethodBadge from '../components/PaymentMethodBadge';
 
