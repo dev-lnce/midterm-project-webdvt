@@ -24,12 +24,12 @@ const TransactionItem = memo(function TransactionItem({ transaction }) {
       onClick={() => navigate(`/transaction/${transaction.id}`)}
       className="p-4 sm:p-5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all duration-200 ease-out cursor-pointer group active:scale-[0.99]"
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 min-w-0 flex-1 mr-3">
         <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110 ${iconBg}`}>
           <Icon size={22} strokeWidth={2.5} />
         </div>
-        <div>
-          <h4 className="text-sm sm:text-base text-slate-900 font-bold dark:text-slate-100">{transaction.description}</h4>
+        <div className="min-w-0 flex-1">
+          <h4 className="text-sm sm:text-base text-slate-900 font-bold dark:text-slate-100 truncate">{transaction.description}</h4>
           <div className="flex items-center flex-wrap gap-2 mt-1">
             <span className="text-xs font-medium text-slate-500 dark:text-slate-400 shrink-0">{formatDate(transaction.date)}</span>
             <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0"></span>
@@ -41,12 +41,12 @@ const TransactionItem = memo(function TransactionItem({ transaction }) {
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-2 sm:gap-3">
-        <span className={`text-lg sm:text-xl font-bold tabular-nums tracking-tight ${amountColor}`}>
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <span className={`text-lg sm:text-xl font-bold tabular-nums tracking-tight whitespace-nowrap ${amountColor}`}>
           {/* formatCurrency produces "₱1,234.56"; we prepend sign manually to keep +/- visual meaning */}
           {sign}{formatCurrency(Math.abs(transaction.amount))}
         </span>
-        <ChevronRight size={20} className="text-slate-400 group-hover:text-emerald-600 dark:text-slate-500 dark:group-hover:text-emerald-400 transition-colors group-hover:translate-x-1 duration-200" />
+        <ChevronRight size={20} className="text-slate-400 group-hover:text-emerald-600 dark:text-slate-500 dark:group-hover:text-emerald-400 transition-colors group-hover:translate-x-1 duration-200 shrink-0" />
       </div>
     </div>
   );

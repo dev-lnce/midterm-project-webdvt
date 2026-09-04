@@ -12,6 +12,8 @@ export default function Layout() {
     return location.pathname.startsWith(path);
   };
 
+  const hideBottomNav = location.pathname === '/add' || location.pathname.startsWith('/transaction');
+
   return (
     <div className="flex bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen transition-colors duration-300">
       
@@ -35,13 +37,14 @@ export default function Layout() {
 
       {/* Main Content Area */}
       <main className="flex-1 lg:ml-64 w-full flex flex-col min-h-screen">
-        <div className="flex-1 w-full max-w-5xl mx-auto p-4 sm:p-8 lg:p-10 pt-20 lg:pt-10 pb-24 lg:pb-10">
+        <div className="flex-1 w-full max-w-5xl mx-auto p-4 sm:p-8 lg:p-10 pt-20 lg:pt-10 pb-28 lg:pb-10">
           <Outlet />
         </div>
       </main>
 
       {/* Mobile Bottom NavBar */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-t border-slate-200/50 dark:border-slate-800 flex items-center justify-around z-50 transition-colors duration-300 pb-safe">
+      {!hideBottomNav && (
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-t border-slate-200/50 dark:border-slate-800 flex items-center justify-around z-50 transition-colors duration-300 pb-safe">
         <Link 
           to="/" 
           className={`flex flex-col items-center justify-center w-16 h-full transition-all duration-200 active:scale-[0.98] ${
@@ -75,6 +78,7 @@ export default function Layout() {
           <span className="text-[10px] font-medium mt-1">Summary</span>
         </Link>
       </nav>
+      )}
     </div>
   );
 }

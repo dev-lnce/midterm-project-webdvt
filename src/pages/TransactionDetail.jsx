@@ -82,6 +82,8 @@ export default function TransactionDetail() {
     const numAmount = Number(editForm.amount);
     if (!editForm.amount || isNaN(numAmount) || numAmount <= 0) {
       newErrors.amount = 'Please enter a valid positive amount';
+    } else if (numAmount > 999999999.99) {
+      newErrors.amount = 'Amount cannot exceed ₱999,999,999.99';
     }
 
     if (!editForm.date) {
@@ -115,6 +117,15 @@ export default function TransactionDetail() {
 
   const isIncome = transaction.type === 'Income';
 
+  const amountStr = formatCurrency(Math.abs(transaction.amount));
+  const amountTextSize = amountStr.length > 18
+    ? "text-xl sm:text-2xl"
+    : amountStr.length > 14
+    ? "text-2xl sm:text-3xl"
+    : amountStr.length > 11
+    ? "text-3xl sm:text-4xl"
+    : "text-4xl sm:text-5xl";
+
   const descriptionPlaceholder = isIncome
     ? 'e.g., Monthly Salary, Freelance project'
     : 'e.g., Grocery run, Coffee, Electric bill';
@@ -135,30 +146,37 @@ export default function TransactionDetail() {
       <div className="w-full max-w-lg mx-auto bg-white dark:bg-slate-900 rounded-3xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800 relative">
 
         {/* Header Area */}
-        <div className={`p-8 text-center flex flex-col items-center justify-center ${isIncome ? 'bg-emerald-50/50 dark:bg-emerald-500/5' : 'bg-rose-50/50 dark:bg-rose-500/5'} border-b border-slate-100 dark:border-slate-800 relative`}>
-          <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mb-5 ${isIncome ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-rose-100 dark:bg-rose-500/20 text-rose-500 dark:text-rose-400'}`}>
+        <div className={`p-8 text-center flex flex-col items-center justify-center w-full overflow-hidden ${isIncome ? 'bg-emerald-50/50 dark:bg-emerald-500/5' : 'bg-rose-50/50 dark:bg-rose-500/5'} border-b border-slate-100 dark:border-slate-800 relative`}>
+          <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mb-5 shrink-0 ${isIncome ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-rose-100 dark:bg-rose-500/20 text-rose-500 dark:text-rose-400'}`}>
             <span className="text-3xl font-bold">{isIncome ? '+' : '-'}</span>
           </div>
 
           {isEditing ? (
-            <div className="relative inline-block w-48">
-              <span className={`absolute left-0 top-1/2 -translate-y-1/2 text-2xl font-bold ${isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>₱</span>
+            <div className="relative inline-block w-full max-w-xs">
+              <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-xl sm:text-2xl font-bold pointer-events-none ${isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>₱</span>
               <input
                 type="number"
                 name="amount"
                 step="0.01"
+                min="0.01"
+                max="999999999.99"
                 value={editForm.amount}
                 onChange={handleChange}
-                className={`w-full pl-8 py-2 text-4xl font-bold tabular-nums text-center bg-transparent border-b-2 outline-none dark:text-slate-100 transition-colors ${
+                className={`w-full pl-9 pr-3 py-2 text-2xl sm:text-4xl font-bold tabular-nums text-center bg-transparent border-b-2 outline-none dark:text-slate-100 transition-colors ${
                   errors.amount ? 'border-rose-500' : 'border-slate-300 dark:border-slate-600 focus:border-emerald-500'
                 }`}
               />
               {errors.amount && <p className="text-rose-500 text-xs font-semibold mt-2 absolute -bottom-6 left-0 w-full text-center">{errors.amount}</p>}
             </div>
           ) : (
-            <h1 className={`text-5xl font-bold tabular-nums tracking-tight ${isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-slate-100'}`}>
-              {formatCurrency(Math.abs(transaction.amount))}
-            </h1>
+            <div className="w-full max-w-full overflow-hidden px-2 flex justify-center">
+              <h1 
+                title={amountStr}
+                className={`${amountTextSize} font-bold tabular-nums tracking-tight whitespace-nowrap truncate max-w-full ${isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-slate-100'}`}
+              >
+                {amountStr}
+              </h1>
+            </div>
           )}
           
         </div>
@@ -184,7 +202,7 @@ export default function TransactionDetail() {
                 {errors.description && <p className="text-rose-500 text-sm font-medium mt-1">{errors.description}</p>}
               </div>
             ) : (
-              <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{transaction.description || <span className="text-slate-400 italic font-normal">No description</span>}</p>
+              <p className="text-xl font-bold text-slate-900 dark:text-slate-100 break-words">{transaction.description || <span className="text-slate-400 italic font-normal">No description</span>}</p>
             )}
           </div>
 
@@ -268,7 +286,7 @@ export default function TransactionDetail() {
                     name="date"
                     value={editForm.date}
                     onChange={handleChange}
-                    className={`w-full px-4 py-3 rounded-xl border bg-slate-50/50 dark:bg-slate-800/50 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all dark:text-slate-100 ${
+                    className={`w-full min-w-0 max-w-full box-border appearance-none [-webkit-appearance:none] px-4 py-3 rounded-xl border bg-slate-50/50 dark:bg-slate-800/50 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all dark:text-slate-100 ${
                       errors.date ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-slate-700'
                     }`}
                   />

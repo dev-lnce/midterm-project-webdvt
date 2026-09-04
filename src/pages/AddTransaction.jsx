@@ -60,6 +60,8 @@ export default function AddTransaction() {
     const numAmount = Number(formData.amount);
     if (!formData.amount || isNaN(numAmount) || numAmount <= 0) {
       newErrors.amount = 'Please enter a valid positive amount';
+    } else if (numAmount > 999999999.99) {
+      newErrors.amount = 'Amount cannot exceed ₱999,999,999.99';
     }
 
     if (!formData.date) {
@@ -185,6 +187,8 @@ export default function AddTransaction() {
               <input
                 type="number"
                 step="0.01"
+                min="0.01"
+                max="999999999.99"
                 name="amount"
                 value={formData.amount}
                 onChange={handleChange}

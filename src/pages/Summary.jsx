@@ -163,19 +163,19 @@ export default function Summary() {
                         className="w-full group focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 rounded-lg"
                       >
                         <div className="flex justify-between items-end mb-2">
-                          <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+                          <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3 min-w-0 flex-1 mr-2 overflow-hidden">
                             <span
                               className="w-3.5 h-3.5 rounded-full shadow-sm shrink-0"
                               style={{ backgroundColor: hexColor }}
                             />
-                            {category.name}
+                            <span className="truncate">{category.name}</span>
                           </span>
-                          <div className="flex items-center gap-2 text-right">
+                          <div className="flex items-center gap-2 text-right shrink-0">
                             <div>
-                              <span className="text-base font-bold tabular-nums text-slate-900 dark:text-slate-100">
+                              <span className="text-base font-bold tabular-nums text-slate-900 dark:text-slate-100 whitespace-nowrap">
                                 {formatCurrency(category.amount)}
                               </span>
-                              <span className="text-slate-500 dark:text-slate-400 text-xs ml-1.5 tabular-nums font-semibold">
+                              <span className="text-slate-500 dark:text-slate-400 text-xs ml-1.5 tabular-nums font-semibold whitespace-nowrap">
                                 ({category.percentage.toFixed(1)}%)
                               </span>
                             </div>
@@ -217,7 +217,7 @@ export default function Summary() {
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-1 shrink-0">
-                                    <span className="text-sm font-bold tabular-nums text-slate-700 dark:text-slate-200">
+                                    <span className="text-sm font-bold tabular-nums text-slate-700 dark:text-slate-200 whitespace-nowrap">
                                       -{formatCurrency(t.amount)}
                                     </span>
                                     <ChevronRight size={16} className="text-slate-400 group-hover/item:text-emerald-600 dark:group-hover/item:text-emerald-400 transition-colors opacity-0 group-hover/item:opacity-100 group-hover/item:translate-x-0.5 duration-200" />
