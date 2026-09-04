@@ -266,17 +266,19 @@ export default function AddTransaction() {
           </div>
           
           {/* Date */}
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5 w-full overflow-hidden">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Date</label>
-            <input
-              type="date"
-              name="date"
-              value={formData.date}
-              onChange={handleChange}
-              className={`w-full px-4 py-3 rounded-xl border bg-slate-50/50 dark:bg-slate-800/50 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all dark:text-slate-100 ${
-                errors.date ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-slate-700'
-              }`}
-            />
+            <div className="w-full min-w-0 max-w-full box-border">
+              <input
+                type="date"
+                name="date"
+                value={formData.date}
+                onChange={handleChange}
+                className={`w-full min-w-0 max-w-full box-border appearance-none [-webkit-appearance:none] px-4 py-3 rounded-xl border bg-slate-50/50 dark:bg-slate-800/50 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all dark:text-slate-100 ${
+                  errors.date ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-slate-700'
+                }`}
+              />
+            </div>
             {errors.date && <p className="text-rose-500 text-sm mt-1">{errors.date}</p>}
           </div>
 

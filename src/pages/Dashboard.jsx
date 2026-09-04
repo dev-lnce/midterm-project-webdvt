@@ -282,7 +282,7 @@ export default function Dashboard() {
               }`}
             >
               {/* Centered, Maximized Bar Chart */}
-              <div className="w-full h-[265px]">
+              <div className="w-full h-[250px]">
                 <IncomeExpenseBarChart
                   transactions={transactions}
                   hideLegend={true}
@@ -301,7 +301,7 @@ export default function Dashboard() {
               </div>
 
               {/* Financial Metric Row */}
-              <div className="grid grid-cols-3 gap-2 pt-2 pb-1 border-t border-slate-100 dark:border-slate-800 text-center w-full">
+              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-center w-full shrink-0">
                 <div className="flex flex-col items-center">
                   <span className="text-[11px] font-medium text-slate-400 mb-0.5">Income</span>
                   <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
@@ -325,8 +325,8 @@ export default function Dashboard() {
           </div>
 
           {/* Card Footer ("View Full Summary") */}
-          <div className="pt-1 text-center mt-auto">
-            <Link className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 inline-flex items-center gap-1 transition-colors" to="/summary">
+          <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-center w-full">
+            <Link className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline inline-flex items-center gap-1" to="/summary">
               <span>View Full Summary</span>
               <span>→</span>
             </Link>

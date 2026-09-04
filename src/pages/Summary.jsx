@@ -25,6 +25,7 @@ export default function Summary() {
 
   const [expandedCategories, setExpandedCategories] = useState(new Set());
   const [timeframe, setTimeframe] = useState('monthly');
+  const [breakdownFilter, setBreakdownFilter] = useState('monthly'); // 'daily' | 'weekly' | 'monthly'
 
   const toggleCategory = (categoryName) => {
     setExpandedCategories(prev => {
@@ -38,11 +39,39 @@ export default function Summary() {
     });
   };
 
-  const expenseByCategory = useMemo(() => {
+  const filteredExpenses = useMemo(() => {
     const expenses = transactions.filter(t => t.type === 'Expense');
-    const totalExpenses = expenses.reduce((acc, curr) => acc + curr.amount, 0);
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const currentDay = now.getDate();
 
-    const categories = expenses.reduce((acc, curr) => {
+    const today = new Date(currentYear, currentMonth, currentDay);
+    const sevenDaysAgo = new Date(currentYear, currentMonth, currentDay - 6);
+
+    const todayStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(currentDay).padStart(2, '0')}`;
+    const currentMonthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+
+    return expenses.filter(t => {
+      if (!t.date) return false;
+      const [y, m, d] = t.date.split('-').map(Number);
+      const tDate = new Date(y, m - 1, d);
+
+      if (breakdownFilter === 'daily') {
+        return t.date === todayStr;
+      } else if (breakdownFilter === 'weekly') {
+        return tDate >= sevenDaysAgo && tDate <= today;
+      } else if (breakdownFilter === 'monthly') {
+        return t.date.startsWith(currentMonthStr);
+      }
+      return true;
+    });
+  }, [transactions, breakdownFilter]);
+
+  const expenseByCategory = useMemo(() => {
+    const totalExpenses = filteredExpenses.reduce((acc, curr) => acc + curr.amount, 0);
+
+    const categories = filteredExpenses.reduce((acc, curr) => {
       if (acc[curr.category]) {
         acc[curr.category] += curr.amount;
       } else {
@@ -58,17 +87,17 @@ export default function Summary() {
         percentage: totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0
       }))
       .sort((a, b) => b.amount - a.amount);
-  }, [transactions]);
+  }, [filteredExpenses]);
 
   const transactionsByCategory = useMemo(() => {
     const map = {};
-    transactions.filter(t => t.type === 'Expense').forEach(t => {
+    filteredExpenses.forEach(t => {
       if (!map[t.category]) map[t.category] = [];
       map[t.category].push(t);
     });
     Object.values(map).forEach(arr => arr.sort((a, b) => b.date.localeCompare(a.date)));
     return map;
-  }, [transactions]);
+  }, [filteredExpenses]);
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8">
@@ -87,10 +116,28 @@ export default function Summary() {
 
         <div className="absolute right-0 top-0 w-64 h-64 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/3"></div>
 
-        <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-6 pb-6 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2 relative z-10">
-          <ListFilter size={20} className="text-slate-400 dark:text-slate-500" />
-          Expense Breakdown
-        </h3>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-6 border-b border-slate-100 dark:border-slate-800 relative z-10">
+          <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <ListFilter size={20} className="text-slate-400 dark:text-slate-500" />
+            Expense Breakdown
+          </h3>
+
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl text-xs">
+            {['daily', 'weekly', 'monthly'].map((filter) => (
+              <button
+                key={filter}
+                onClick={() => setBreakdownFilter(filter)}
+                className={`px-3 py-1 rounded-lg font-medium capitalize transition-all ${
+                  breakdownFilter === filter
+                    ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
+                }`}
+              >
+                {filter}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {expenseByCategory.length > 0 ? (
           <div className="relative z-10">
@@ -193,7 +240,13 @@ export default function Summary() {
               <PieChart size={32} className="text-slate-400 dark:text-slate-500 opacity-50" />
             </div>
             <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">No expenses recorded</h3>
-            <p className="text-slate-500 dark:text-slate-400 font-medium w-full">Add some expenses to see your spending breakdown.</p>
+            <p className="text-slate-500 dark:text-slate-400 font-medium w-full">
+              {breakdownFilter === 'daily'
+                ? 'No expenses recorded for today.'
+                : breakdownFilter === 'weekly'
+                ? 'No expenses recorded for the past 7 days.'
+                : 'No expenses recorded for this month.'}
+            </p>
           </div>
         )}
       </div>
