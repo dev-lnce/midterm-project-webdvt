@@ -1,6 +1,6 @@
 # Personal Budget Tracker - Midterm Project
 
-This is a complete, production-ready multi-page Personal Budget Tracker built using React (Vite, JavaScript). The project is built following the "Emerald Budget" design system from Google Stitch, matching the specified aesthetics with Tailwind CSS.
+This is a complete, production-ready multi-page Personal Budget Tracker built using React (Vite, JavaScript). The project is built following the "DEVit" design system from Google Stitch, matching the specified aesthetics with Tailwind CSS.
 
 ## Getting Started
 

@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTransactions } from '../hooks/useTransactions';
-import { ArrowLeft, TrendingUp, TrendingDown, Save } from 'lucide-react';
+import { useSavingsGoals } from '../hooks/useSavingsGoals';
+import { ArrowLeft, TrendingUp, TrendingDown, Save, CreditCard } from 'lucide-react';
 
 export default function AddTransaction() {
   const { addTransaction } = useTransactions();
+  const { goals, updateGoal } = useSavingsGoals();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -15,31 +17,34 @@ export default function AddTransaction() {
     date: (() => {
       const d = new Date();
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    })(), // YYYY-MM-DD local time
+    })(),
+    paymentMethod: 'Cash',
   });
 
   const [errors, setErrors] = useState({});
+  const [successMessage, setSuccessMessage] = useState('');
 
   const categories = {
     Income: ['Salary', 'Investment', 'Gift', 'Other'],
     Expense: ['Food', 'Housing', 'Transportation', 'Utilities', 'Entertainment', 'Other'],
   };
+  
+  const paymentMethods = ['Cash', 'E-Wallet (GCash / Maya)', 'Debit Card', 'Credit Card', 'Bank Transfer'];
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
+    const finalValue = type === 'checkbox' ? checked : value;
 
-    // Auto-update category if type changes to prevent invalid category/type combos
     if (name === 'type') {
       setFormData(prev => ({
         ...prev,
-        [name]: value,
-        category: categories[value][0]
+        [name]: finalValue,
+        category: categories[finalValue][0]
       }));
     } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+      setFormData(prev => ({ ...prev, [name]: finalValue }));
     }
 
-    // Clear error when user types
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: null }));
     }
@@ -47,6 +52,7 @@ export default function AddTransaction() {
 
   const validate = () => {
     const newErrors = {};
+    
     if (!formData.description.trim()) {
       newErrors.description = 'Description is required';
     }
@@ -63,6 +69,10 @@ export default function AddTransaction() {
     if (!formData.category) {
       newErrors.category = 'Category is required';
     }
+    
+    if (!formData.paymentMethod) {
+      newErrors.paymentMethod = 'Payment Method is required';
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -71,25 +81,50 @@ export default function AddTransaction() {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validate()) {
+      const amount = Number(formData.amount);
+      
       addTransaction({
         description: formData.description.trim(),
-        amount: Number(formData.amount),
+        amount: amount,
         type: formData.type,
         category: formData.category,
         date: formData.date,
+        paymentMethod: formData.paymentMethod,
       });
-      // Delay navigation so the state update and useEffect save to localStorage can finish
+
+      // Handle Virtual Allocation for Savings Goals
+      // Goal contributions are a virtual allocation layer. They simply increment the goal's currentAmount 
+      // in the goals state without touching the transaction array or affecting Total Income/Balance.
+      // (Note: Legacy recurring/notes fields were removed as they were unimplemented/promissory features).
+      if (formData.type === 'Income') {
+        let totalAllocated = 0;
+        let activeGoalsCount = 0;
+        
+        goals.forEach(goal => {
+          if (goal.autoDeductEnabled) {
+            const allocation = (amount * goal.autoDeductPercentage) / 100;
+            // This is a virtual allocation: we increment the goal's current amount
+            updateGoal(goal.id, { currentAmount: (goal.currentAmount || 0) + allocation });
+            totalAllocated += allocation;
+            activeGoalsCount++;
+          }
+        });
+        
+        if (activeGoalsCount > 0) {
+          // Show toast/message before navigating
+          setSuccessMessage(`₱${totalAllocated.toFixed(2)} auto-added to ${activeGoalsCount} goal(s)`);
+          setTimeout(() => navigate('/'), 1500);
+          return;
+        }
+      }
+
       setTimeout(() => navigate('/'), 0);
     }
   };
 
-  // Context-aware label and placeholder for the description/source field.
-  // The underlying data field name stays `description` so the data model
-  // (and useTransactions.js) remains completely untouched.
-  const descriptionLabel = formData.type === 'Income' ? 'Source' : 'Description';
   const descriptionPlaceholder = formData.type === 'Income'
-    ? 'e.g. Monthly allowance, Salary, Freelance payment'
-    : 'e.g. Grocery shopping';
+    ? 'e.g., Monthly Salary, Freelance project'
+    : 'e.g., Grocery run, Coffee, Electric bill';
 
   return (
     <div className="w-full">
@@ -105,8 +140,13 @@ export default function AddTransaction() {
       </div>
 
       <div className="w-full max-w-lg mx-auto bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
+        {successMessage && (
+          <div className="mb-6 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-semibold text-sm text-center border border-emerald-200/50 dark:border-emerald-500/20">
+            {successMessage}
+          </div>
+        )}
+        
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-
           {/* Type Toggle */}
           <div className="flex rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700">
             <button
@@ -135,27 +175,11 @@ export default function AddTransaction() {
             </button>
           </div>
 
-          {/* Description / Source — label and placeholder are context-aware */}
+          {/* Amount */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              {descriptionLabel}
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex justify-between">
+              <span>Amount</span>
             </label>
-            <input
-              type="text"
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              className={`w-full px-4 py-3 rounded-xl border bg-slate-50/50 dark:bg-slate-800/50 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all dark:text-slate-100 ${
-                errors.description ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-slate-700'
-              }`}
-              placeholder={descriptionPlaceholder}
-            />
-            {errors.description && <p className="text-rose-500 text-sm mt-1">{errors.description}</p>}
-          </div>
-
-          {/* Amount — ₱ symbol replaces $ */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Amount</label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 font-medium">₱</span>
               <input
@@ -173,9 +197,27 @@ export default function AddTransaction() {
             {errors.amount && <p className="text-rose-500 text-sm mt-1">{errors.amount}</p>}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Description */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex justify-between">
+              <span>Description <span className="text-rose-500">*</span></span>
+            </label>
+            <input
+              type="text"
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              className={`w-full px-4 py-3 rounded-xl border bg-slate-50/50 dark:bg-slate-800/50 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all dark:text-slate-100 ${
+                errors.description ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-slate-700'
+              }`}
+              placeholder={descriptionPlaceholder}
+            />
+            {errors.description && <p className="text-rose-500 text-sm mt-1">{errors.description}</p>}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 z-10 relative">
             {/* Category */}
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5 z-20 relative">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Category</label>
               <div className="relative">
                 <select
@@ -197,23 +239,50 @@ export default function AddTransaction() {
               {errors.category && <p className="text-rose-500 text-sm mt-1">{errors.category}</p>}
             </div>
 
-            {/* Date */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Date</label>
-              <input
-                type="date"
-                name="date"
-                value={formData.date}
-                onChange={handleChange}
-                className={`w-full px-4 py-3 rounded-xl border bg-slate-50/50 dark:bg-slate-800/50 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all dark:text-slate-100 ${
-                  errors.date ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-slate-700'
-                }`}
-              />
-              {errors.date && <p className="text-rose-500 text-sm mt-1">{errors.date}</p>}
+            {/* Payment Method */}
+            <div className="flex flex-col gap-1.5 z-10 relative">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Payment Method</label>
+              <div className="relative">
+                <select
+                  name="paymentMethod"
+                  value={formData.paymentMethod}
+                  onChange={handleChange}
+                  className={`w-full px-4 py-3 appearance-none rounded-xl border bg-slate-50/50 dark:bg-slate-800/50 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all dark:text-slate-100 ${
+                    errors.paymentMethod ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-slate-700'
+                  }`}
+                >
+                  {paymentMethods.map(method => (
+                    <option key={method} value={method}>{method}</option>
+                  ))}
+                </select>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 dark:text-slate-400">
+                  <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+              </div>
+              {errors.paymentMethod && <p className="text-rose-500 text-sm mt-1">{errors.paymentMethod}</p>}
             </div>
           </div>
+          
+          {/* Date */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Date</label>
+            <input
+              type="date"
+              name="date"
+              value={formData.date}
+              onChange={handleChange}
+              className={`w-full px-4 py-3 rounded-xl border bg-slate-50/50 dark:bg-slate-800/50 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all dark:text-slate-100 ${
+                errors.date ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-slate-700'
+              }`}
+            />
+            {errors.date && <p className="text-rose-500 text-sm mt-1">{errors.date}</p>}
+          </div>
 
-          <div className="pt-2 flex flex-col sm:flex-row gap-4">
+
+
+          <div className="pt-4 flex flex-col sm:flex-row gap-4 border-t border-slate-100 dark:border-slate-800">
             <button
               type="button"
               onClick={() => navigate('/')}
@@ -223,7 +292,8 @@ export default function AddTransaction() {
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 px-4 rounded-xl font-medium text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition-all duration-200 ease-out active:scale-[0.98] flex items-center justify-center gap-2"
+              disabled={!!successMessage}
+              className="flex-1 py-3 px-4 rounded-xl font-medium text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition-all duration-200 ease-out active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               <Save size={18} />
               Save Transaction

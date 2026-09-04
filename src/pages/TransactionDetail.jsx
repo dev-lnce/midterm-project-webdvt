@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTransactions } from '../hooks/useTransactions';
-import { ArrowLeft, Save, Trash2, Edit2, AlertCircle, X, SearchX } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Edit2, AlertCircle, X, SearchX, Repeat } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
+import PaymentMethodBadge from '../components/PaymentMethodBadge';
 
 export default function TransactionDetail() {
   const { id } = useParams();
@@ -15,11 +16,20 @@ export default function TransactionDetail() {
   const [errors, setErrors] = useState({});
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  const categories = {
+    Income: ['Salary', 'Investment', 'Gift', 'Other'],
+    Expense: ['Food', 'Housing', 'Transportation', 'Utilities', 'Entertainment', 'Other'],
+  };
+  const paymentMethods = ['Cash', 'E-Wallet (GCash / Maya)', 'Debit Card', 'Credit Card', 'Bank Transfer'];
+
   useEffect(() => {
     const tx = getTransactionById(id);
     if (tx) {
       setTransaction(tx);
-      setEditForm(tx);
+      setEditForm({
+        ...tx,
+        paymentMethod: tx.paymentMethod || 'Cash'
+      });
     }
   }, [id, getTransactionById]);
 
@@ -43,19 +53,29 @@ export default function TransactionDetail() {
 
   const handleDelete = () => {
     deleteTransaction(id);
-    // Delay navigation so the state update and useEffect save to localStorage can finish
     setTimeout(() => navigate('/'), 0);
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setEditForm(prev => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    const finalValue = type === 'checkbox' ? checked : value;
+
+    if (name === 'type') {
+      setEditForm(prev => ({
+        ...prev,
+        [name]: finalValue,
+        category: categories[finalValue][0]
+      }));
+    } else {
+      setEditForm(prev => ({ ...prev, [name]: finalValue }));
+    }
+
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
   };
 
   const validate = () => {
     const newErrors = {};
-    if (!editForm.description.trim()) {
+    if (!editForm.description?.trim()) {
       newErrors.description = 'Description is required';
     }
 
@@ -68,8 +88,12 @@ export default function TransactionDetail() {
       newErrors.date = 'Date is required';
     }
 
-    if (!editForm.category.trim()) {
+    if (!editForm.category?.trim()) {
       newErrors.category = 'Category is required';
+    }
+
+    if (!editForm.paymentMethod?.trim()) {
+      newErrors.paymentMethod = 'Payment Method is required';
     }
 
     setErrors(newErrors);
@@ -78,26 +102,22 @@ export default function TransactionDetail() {
 
   const handleSave = () => {
     if (validate()) {
-      updateTransaction(id, {
+      const updated = {
         ...editForm,
-        amount: Number(editForm.amount)
-      });
-      setTransaction({
-        ...editForm,
-        amount: Number(editForm.amount)
-      });
+        amount: Number(editForm.amount),
+        description: editForm.description?.trim() || ''
+      };
+      updateTransaction(id, updated);
+      setTransaction(updated);
       setIsEditing(false);
     }
   };
 
   const isIncome = transaction.type === 'Income';
 
-  // Context-aware label/placeholder for the description/source field in edit mode.
-  // The underlying data field stays `description` — only the UI label changes.
-  const descriptionLabel = isIncome ? 'Source' : 'Description';
   const descriptionPlaceholder = isIncome
-    ? 'e.g. Monthly allowance, Salary, Freelance payment'
-    : 'e.g. Grocery shopping';
+    ? 'e.g., Monthly Salary, Freelance project'
+    : 'e.g., Grocery run, Coffee, Electric bill';
 
   return (
     <div className="w-full">
@@ -116,14 +136,12 @@ export default function TransactionDetail() {
 
         {/* Header Area */}
         <div className={`p-8 text-center flex flex-col items-center justify-center ${isIncome ? 'bg-emerald-50/50 dark:bg-emerald-500/5' : 'bg-rose-50/50 dark:bg-rose-500/5'} border-b border-slate-100 dark:border-slate-800 relative`}>
-
           <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mb-5 ${isIncome ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-rose-100 dark:bg-rose-500/20 text-rose-500 dark:text-rose-400'}`}>
             <span className="text-3xl font-bold">{isIncome ? '+' : '-'}</span>
           </div>
 
           {isEditing ? (
             <div className="relative inline-block w-48">
-              {/* ₱ symbol replaces $ in edit mode */}
               <span className={`absolute left-0 top-1/2 -translate-y-1/2 text-2xl font-bold ${isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>₱</span>
               <input
                 type="number"
@@ -139,17 +157,18 @@ export default function TransactionDetail() {
             </div>
           ) : (
             <h1 className={`text-5xl font-bold tabular-nums tracking-tight ${isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-slate-100'}`}>
-              {/* formatCurrency handles ₱ symbol + thousand separators */}
               {formatCurrency(Math.abs(transaction.amount))}
             </h1>
           )}
+          
         </div>
 
         {/* Details Area */}
         <div className="p-6 sm:p-8 space-y-6">
           <div className="space-y-1.5">
-            {/* Context-aware label: 'Source' for Income, 'Description' for Expense */}
-            <label className="text-sm font-medium text-slate-500 dark:text-slate-400">{descriptionLabel}</label>
+            <label className="text-sm font-medium text-slate-500 dark:text-slate-400">
+              Description {isEditing && <span className="text-rose-500">*</span>}
+            </label>
             {isEditing ? (
               <div>
                 <input
@@ -165,36 +184,78 @@ export default function TransactionDetail() {
                 {errors.description && <p className="text-rose-500 text-sm font-medium mt-1">{errors.description}</p>}
               </div>
             ) : (
-              <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{transaction.description}</p>
+              <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{transaction.description || <span className="text-slate-400 italic font-normal">No description</span>}</p>
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-slate-500 dark:text-slate-400">Type</label>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg font-semibold text-sm bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700">
-                <div className={`w-2 h-2 rounded-full ${isIncome ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
-                {transaction.type}
-              </div>
+              {isEditing ? (
+                <div className="relative">
+                  <select
+                    name="type"
+                    value={editForm.type}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 appearance-none rounded-xl border bg-slate-50/50 dark:bg-slate-800/50 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all dark:text-slate-100 border-slate-200 dark:border-slate-700 font-medium"
+                  >
+                    <option value="Expense">Expense</option>
+                    <option value="Income">Income</option>
+                  </select>
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg font-semibold text-sm bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700">
+                  <div className={`w-2 h-2 rounded-full ${isIncome ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
+                  {transaction.type}
+                </div>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-slate-500 dark:text-slate-400">Category</label>
               {isEditing ? (
                 <div>
-                  <input
-                    type="text"
+                  <select
                     name="category"
                     value={editForm.category}
                     onChange={handleChange}
-                    className={`w-full px-4 py-3 rounded-xl border bg-slate-50/50 dark:bg-slate-800/50 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all dark:text-slate-100 ${
+                    className={`w-full px-4 py-3 appearance-none rounded-xl border bg-slate-50/50 dark:bg-slate-800/50 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all dark:text-slate-100 ${
                       errors.category ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-slate-700'
                     }`}
-                  />
+                  >
+                    {categories[editForm.type].map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
                   {errors.category && <p className="text-rose-500 text-sm font-medium mt-1">{errors.category}</p>}
                 </div>
               ) : (
                 <p className="font-semibold text-slate-900 dark:text-slate-100">{transaction.category}</p>
+              )}
+            </div>
+
+            <div className="space-y-1.5 col-span-2 sm:col-span-1">
+              <label className="text-sm font-medium text-slate-500 dark:text-slate-400">Payment Method</label>
+              {isEditing ? (
+                <div>
+                  <select
+                    name="paymentMethod"
+                    value={editForm.paymentMethod}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-3 appearance-none rounded-xl border bg-slate-50/50 dark:bg-slate-800/50 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all dark:text-slate-100 ${
+                      errors.paymentMethod ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-slate-700'
+                    }`}
+                  >
+                    {paymentMethods.map(method => (
+                      <option key={method} value={method}>{method}</option>
+                    ))}
+                  </select>
+                  {errors.paymentMethod && <p className="text-rose-500 text-sm font-medium mt-1">{errors.paymentMethod}</p>}
+                </div>
+              ) : (
+                <div>
+                  {transaction.paymentMethod ? <PaymentMethodBadge method={transaction.paymentMethod} /> : <span className="text-sm text-slate-500 italic">None</span>}
+                </div>
               )}
             </div>
 
@@ -217,6 +278,7 @@ export default function TransactionDetail() {
                 <p className="font-semibold text-slate-900 dark:text-slate-100">{new Date(transaction.date).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' })}</p>
               )}
             </div>
+            
           </div>
         </div>
 
@@ -251,7 +313,10 @@ export default function TransactionDetail() {
             <>
               <button
                 onClick={() => {
-                  setEditForm(transaction);
+                  setEditForm({
+                    ...transaction,
+                    paymentMethod: transaction.paymentMethod || 'Cash'
+                  });
                   setErrors({});
                   setIsEditing(false);
                 }}

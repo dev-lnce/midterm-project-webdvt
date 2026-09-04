@@ -4,8 +4,10 @@ import {
   AreaChart,
   Area,
   ResponsiveContainer,
+  Tooltip,
 } from 'recharts';
 import { TrendingUp } from 'lucide-react';
+import { formatCurrency } from '../utils/formatCurrency';
 
 /**
  * BalanceTrendChart
@@ -86,6 +88,26 @@ export default function BalanceTrendChart({ transactions }) {
            *   - activeDot={false}→ no highlight on hover (keeps it subtle)
            *   - strokeWidth={2}  → visible but not heavy line
            */}
+          {/* Tooltip for hover interaction */}
+          <Tooltip 
+            content={({ active, payload }) => {
+              if (active && payload && payload.length) {
+                const date = new Date(payload[0].payload.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                return (
+                  <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/50 p-3 rounded-xl shadow-xl flex flex-col gap-1 z-50">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{date}</span>
+                    <span className="text-base font-bold text-white tabular-nums flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]"></span>
+                      {formatCurrency(payload[0].value)}
+                    </span>
+                  </div>
+                );
+              }
+              return null;
+            }}
+            cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1, strokeDasharray: '4 4' }}
+          />
+
           <Area
             type="monotone"
             dataKey="balance"

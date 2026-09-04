@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { useNavigate } from 'react-router-dom';
 import { ArrowUpRight, ArrowDownRight, ChevronRight } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
+import PaymentMethodBadge from './PaymentMethodBadge';
 
 const TransactionItem = memo(function TransactionItem({ transaction }) {
   const navigate = useNavigate();
@@ -29,12 +30,14 @@ const TransactionItem = memo(function TransactionItem({ transaction }) {
         </div>
         <div>
           <h4 className="text-sm sm:text-base text-slate-900 font-bold dark:text-slate-100">{transaction.description}</h4>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{formatDate(transaction.date)}</span>
-            <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></span>
-            <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${isIncome ? 'bg-emerald-100/50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>
+          <div className="flex items-center flex-wrap gap-2 mt-1">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400 shrink-0">{formatDate(transaction.date)}</span>
+            <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0"></span>
+            <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider shrink-0 ${isIncome ? 'bg-emerald-100/50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>
               {transaction.category}
             </span>
+            {transaction.paymentMethod && <PaymentMethodBadge method={transaction.paymentMethod} />}
+
           </div>
         </div>
       </div>

@@ -31,8 +31,19 @@ import { formatCurrency } from '../utils/formatCurrency';
  *   Each entry is { month: "Sep 2026", income: number, expense: number }.
  *   `month` maps to XAxis dataKey; `income` and `expense` each map to a Bar.
  *
- * @param {{ transactions: Array }} props
+ * @param {{ transactions: Array, timeframe?: string, hideLegend?: boolean, height?: number | string }} props
  */
+
+const getStartOfWeek = (dateString) => {
+  const d = new Date(dateString);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  const start = new Date(d.setDate(diff));
+  const yyyy = start.getFullYear();
+  const mm = String(start.getMonth() + 1).padStart(2, '0');
+  const dd = String(start.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
 
 // Custom tooltip for dark-mode-safe styling
 const CustomTooltip = ({ active, payload, label }) => {
@@ -87,45 +98,66 @@ CustomLegend.propTypes = {
   payload: PropTypes.array,
 };
 
-export default function IncomeExpenseBarChart({ transactions }) {
-  // --- Derive monthly income/expense totals ---
-  // useMemo: skip re-computation when Summary's unrelated state (e.g.
-  // accordion open state) changes — only recompute when transactions change.
+export default function IncomeExpenseBarChart({
+  transactions,
+  hideLegend = false,
+  height = 260,
+  timeframe = 'monthly',
+  margin = { top: 4, right: 8, left: 8, bottom: 4 },
+  yAxisWidth = 56,
+  maxBarSize = 40,
+  barGap = 4,
+}) {
+  // --- Derive income/expense totals based on timeframe ---
   const chartData = useMemo(() => {
     if (transactions.length === 0) return [];
 
-    // Accumulate totals per YYYY-MM key
-    const monthMap = {};
+    const map = {};
     transactions.forEach((t) => {
-      // t.date is "YYYY-MM-DD"; slice(0,7) gives "YYYY-MM"
-      const monthKey = t.date.slice(0, 7);
-      if (!monthMap[monthKey]) {
-        monthMap[monthKey] = { monthKey, income: 0, expense: 0 };
+      let key;
+      if (timeframe === 'daily') {
+        key = t.date; // YYYY-MM-DD
+      } else if (timeframe === 'weekly') {
+        key = getStartOfWeek(t.date);
+      } else {
+        key = t.date.slice(0, 7); // YYYY-MM
+      }
+
+      if (!map[key]) {
+        map[key] = { key, income: 0, expense: 0 };
       }
       if (t.type === 'Income') {
-        monthMap[monthKey].income += t.amount;
+        map[key].income += t.amount;
       } else {
-        monthMap[monthKey].expense += t.amount;
+        map[key].expense += t.amount;
       }
     });
 
-    // Sort chronologically by "YYYY-MM" key (ISO strings sort naturally)
-    return Object.values(monthMap)
-      .sort((a, b) => a.monthKey.localeCompare(b.monthKey))
-      .map(({ monthKey, income, expense }) => {
-        const [year, month] = monthKey.split('-');
-        const dateObj = new Date(year, parseInt(month) - 1, 1);
+    return Object.values(map)
+      .sort((a, b) => a.key.localeCompare(b.key))
+      .map(({ key, income, expense }) => {
+        let label = '';
+        if (timeframe === 'daily') {
+          const [y, m, d] = key.split('-');
+          const dateObj = new Date(y, parseInt(m) - 1, d);
+          label = dateObj.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+        } else if (timeframe === 'weekly') {
+          const [y, m, d] = key.split('-');
+          const dateObj = new Date(y, parseInt(m) - 1, d);
+          label = 'Wk of ' + dateObj.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+        } else {
+          const [y, m] = key.split('-');
+          const dateObj = new Date(y, parseInt(m) - 1, 1);
+          label = dateObj.toLocaleDateString('en-PH', { month: 'short', year: 'numeric' });
+        }
+
         return {
-          // Format the display label: "Sep 2026"
-          month: dateObj.toLocaleDateString('en-PH', {
-            month: 'short',
-            year: 'numeric',
-          }),
+          month: label,
           income,
           expense,
         };
       });
-  }, [transactions]); // only recalculate when transaction list changes
+  }, [transactions, timeframe]);
 
   // --- Empty state ---
   if (chartData.length === 0) {
@@ -142,13 +174,13 @@ export default function IncomeExpenseBarChart({ transactions }) {
   }
 
   return (
-    <div className="w-full" style={{ height: 260 }}>
+    <div className="w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={chartData}
-          margin={{ top: 4, right: 8, left: 8, bottom: 4 }}
-          barCategoryGap="30%"  // gap between month groups
-          barGap={4}            // gap between bars in the same group
+          margin={margin}
+          barCategoryGap="25%"
+          barGap={barGap}
         >
           {/*
            * CartesianGrid: only horizontal lines, slate color for dark-mode safety.
@@ -179,21 +211,26 @@ export default function IncomeExpenseBarChart({ transactions }) {
             tick={{ fontSize: 11, fill: '#64748b', fontWeight: 500 }}
             axisLine={false}
             tickLine={false}
-            tickFormatter={(value) =>
-              value >= 1000 ? `₱${(value / 1000).toFixed(1)}K` : `₱${value}`
-            }
-            width={56}
+            tickFormatter={(value) => {
+              if (value === 0) return '₱0';
+              if (value >= 1000) {
+                const k = value / 1000;
+                return k % 1 === 0 ? `₱${k}K` : `₱${k.toFixed(1)}K`;
+              }
+              return `₱${value}`;
+            }}
+            width={yAxisWidth}
           />
 
           <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(100,116,139,0.08)' }} />
-          <Legend content={<CustomLegend />} />
+          {!hideLegend && <Legend content={<CustomLegend />} />}
 
           {/* Income bar — emerald-500 */}
           <Bar
             dataKey="income"
             fill="#10b981"
             radius={[4, 4, 0, 0]}   // rounded top corners
-            maxBarSize={40}
+            maxBarSize={maxBarSize}
             isAnimationActive={true}
             animationDuration={600}
           />
@@ -203,7 +240,7 @@ export default function IncomeExpenseBarChart({ transactions }) {
             dataKey="expense"
             fill="#f43f5e"
             radius={[4, 4, 0, 0]}
-            maxBarSize={40}
+            maxBarSize={maxBarSize}
             isAnimationActive={true}
             animationDuration={600}
           />

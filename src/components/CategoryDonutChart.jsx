@@ -51,7 +51,7 @@ CustomTooltip.propTypes = {
   payload: PropTypes.array,
 };
 
-export default function CategoryDonutChart({ data, colors }) {
+export default function CategoryDonutChart({ data, colors, height = 220 }) {
   // --- Empty state ---
   if (!data || data.length === 0) {
     return (
@@ -71,7 +71,7 @@ export default function CategoryDonutChart({ data, colors }) {
   const pieData = data.map((d) => ({ ...d, value: d.amount }));
 
   return (
-    <div className="w-full" style={{ height: 220 }}>
+    <div className="w-full flex items-center justify-center" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
@@ -79,8 +79,8 @@ export default function CategoryDonutChart({ data, colors }) {
             // cx/cy default to center; innerRadius creates the donut hole
             cx="50%"
             cy="50%"
-            innerRadius="52%"   // donut hole — ~52% of the radius
-            outerRadius="80%"   // slice outer edge
+            innerRadius="55%"   // donut hole — ~55% of the radius
+            outerRadius="82%"   // slice outer edge
             paddingAngle={3}    // small gap between slices for clarity
             dataKey="value"
             isAnimationActive={true}
@@ -114,4 +114,6 @@ CategoryDonutChart.propTypes = {
   ).isRequired,
   /** Ordered array of hex color strings, one per category (wraps around) */
   colors: PropTypes.arrayOf(PropTypes.string).isRequired,
+  /** Height of the chart container */
+  height: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
 };
