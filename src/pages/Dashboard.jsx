@@ -6,6 +6,7 @@ import IncomeExpenseBarChart from '../components/IncomeExpenseBarChart';
 import { Link } from 'react-router-dom';
 import { Wallet, ArrowUpRight, ArrowDownRight, Receipt, SearchX, PieChart, BarChart2, ChevronRight, ChevronLeft, Eye, EyeOff } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
+import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
 
 const CATEGORY_COLORS = [
   '#10b981', // emerald-500
@@ -183,33 +184,12 @@ export default function Dashboard() {
       }
     }
 
-    const min = Math.min(...points);
-    const max = Math.max(...points);
-    const range = max - min || 1;
-    const width = 300;
-    const height = 60;
-    const padding = 6;
-    const numPoints = points.length;
+    const chartData = points.map((val, idx) => ({
+      label: periodLabels[idx],
+      balance: val
+    }));
 
-    const coords = points.map((val, idx) => {
-      const x = (idx / (numPoints - 1)) * width;
-      const y = height - padding - ((val - min) / range) * (height - padding * 2);
-      return { x, y };
-    });
-
-    const pathD = coords.reduce((acc, pt, idx, arr) => {
-      if (idx === 0) return `M ${pt.x.toFixed(1)},${pt.y.toFixed(1)}`;
-      const prev = arr[idx - 1];
-      const cx1 = (prev.x + pt.x) / 2;
-      const cy1 = prev.y;
-      const cx2 = (prev.x + pt.x) / 2;
-      const cy2 = pt.y;
-      return `${acc} C ${cx1.toFixed(1)},${cy1.toFixed(1)} ${cx2.toFixed(1)},${cy2.toFixed(1)} ${pt.x.toFixed(1)},${pt.y.toFixed(1)}`;
-    }, '');
-
-    const areaD = `${pathD} L ${width},${height} L 0,${height} Z`;
-
-    return { pathD, areaD, labels: periodLabels, width, height };
+    return { chartData, labels: periodLabels };
   }, [transactions, balancePeriod]);
 
   return (
@@ -276,16 +256,47 @@ export default function Dashboard() {
 
             {/* Middle Section: 7-Day Balance Trendline Sparkline */}
             <div className="h-20 w-full my-auto flex flex-col justify-center relative z-20">
-              <svg viewBox={`0 0 ${sparklineData.width} ${sparklineData.height}`} className="w-full h-14 overflow-visible" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="balanceSparkGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#34D399" stopOpacity="0.15" />
-                    <stop offset="100%" stopColor="#34D399" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-                <path d={sparklineData.areaD} fill="url(#balanceSparkGrad)" />
-                <path d={sparklineData.pathD} fill="none" stroke="#34D399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              {/* Tooltip-only interaction keeps the resting state clean with no permanent axes or dots */}
+              <div className="w-full h-14">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={sparklineData.chartData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="balanceSparkGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#34D399" stopOpacity="0.15" />
+                        <stop offset="100%" stopColor="#34D399" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const label = payload[0].payload.label;
+                          return (
+                            <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/50 p-2 rounded-xl shadow-xl flex flex-col gap-1 z-50">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</span>
+                              <span className="text-sm font-bold text-white tabular-nums flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]"></span>
+                                {formatCurrency(payload[0].value)}
+                              </span>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                      cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1, strokeDasharray: '4 4' }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="balance"
+                      stroke="#34D399"
+                      strokeWidth={2.5}
+                      fill="url(#balanceSparkGrad)"
+                      dot={false}
+                      activeDot={false}
+                      isAnimationActive={false}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
               <div className="text-[10px] text-emerald-200/50 flex justify-between px-1 mt-1 font-medium select-none">
                 {sparklineData.labels.map(label => (
                   <span key={label}>{label}</span>
